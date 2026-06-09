@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#5C3D1E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ernte-Planer">
+<title>Ernte-Einsatzplaner</title>
+<style>
+  :root {
+    --gold:#D4A017;--gold-light:#F5E6B8;
+    --earth:#5C3D1E;--earth-mid:#8B5E3C;
+    --green:#3A5C2A;--green-light:#E8F0E4;
+    --bg:#FAF7F0;--white:#FFFFFF;
+    --gray:#6B6B6B;--border:#DDD5C0;
+    --danger:#C0392B;--warn:#E67E22;--warn-light:#FEF0E0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--earth);min-height:100vh;}
+  header{background:var(--earth);color:var(--gold-light);padding:14px 18px;}
+  header h1{font-size:1.25rem;font-weight:700;}
+  header .sub{font-size:0.78rem;opacity:0.7;margin-top:2px;}
+  .tab-bar{display:flex;background:var(--earth-mid);}
+  .tab-btn{flex:1;padding:11px 2px;border:none;background:transparent;color:var(--gold-light);font-size:0.72rem;font-weight:600;cursor:pointer;opacity:0.6;transition:all 0.15s;line-height:1.3;}
+  .tab-btn.active{opacity:1;background:var(--bg);color:var(--earth);border-bottom:3px solid var(--gold);}
+  .section{display:none;padding:14px 12px;max-width:640px;margin:0 auto;}
+  .section.active{display:block;}
+  .card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:18px 14px;margin-bottom:12px;}
+  .card h2{font-size:1.1rem;color:var(--earth);margin-bottom:3px;}
+  .card .hint{font-size:0.82rem;color:var(--gray);margin-bottom:16px;}
+  label{display:block;font-weight:700;font-size:0.95rem;margin-bottom:5px;color:var(--earth);}
+  input[type="text"],input[type="date"],input[type="password"]{width:100%;padding:12px;font-size:1rem;border:2px solid var(--border);border-radius:8px;background:var(--bg);color:var(--earth);margin-bottom:14px;}
+  input:focus{border-color:var(--gold);outline:none;background:var(--white);}
+  .btn-main{width:100%;padding:15px;font-size:1.1rem;font-weight:700;background:var(--green);color:var(--white);border:none;border-radius:10px;cursor:pointer;}
+  .btn-main:disabled{opacity:0.5;cursor:not-allowed;}
+  .btn-secondary{width:100%;padding:12px;font-size:0.95rem;font-weight:600;background:transparent;color:var(--earth-mid);border:2px solid var(--border);border-radius:10px;cursor:pointer;margin-top:8px;}
+
+  .vehicle-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px;}
+  .veh-btn{padding:0;border:2px solid var(--border);border-radius:10px;background:var(--bg);cursor:pointer;text-align:center;overflow:hidden;transition:all 0.1s;}
+  .veh-btn.selected{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold);}
+  .veh-thumb{width:100%;height:70px;object-fit:cover;display:block;}
+  .veh-thumb-ph{width:100%;height:70px;display:flex;align-items:center;justify-content:center;gap:4px;font-size:0.78rem;font-weight:800;}
+  .veh-label{padding:7px 6px 8px;}
+  .veh-label .veh-name{font-weight:700;font-size:0.78rem;color:var(--earth);}
+  .veh-label .veh-sub{font-size:0.68rem;color:var(--gray);}
+
+  .success-box{background:var(--green-light);border:2px solid var(--green);border-radius:10px;padding:22px 18px;text-align:center;display:none;}
+  .success-box .icon{font-size:2.6rem;}
+  .success-box p{font-size:1rem;color:var(--green);font-weight:600;margin-top:8px;}
+
+  .login-box{max-width:340px;margin:0 auto;}
+  .overview-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .logout-btn{font-size:0.78rem;color:var(--earth-mid);background:none;border:none;cursor:pointer;text-decoration:underline;}
+
+  .stat-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;}
+  .stat-box{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:12px 8px;text-align:center;}
+  .stat-box .stat-num{font-size:1.8rem;font-weight:800;}
+  .stat-box .stat-lbl{font-size:0.72rem;color:var(--gray);margin-top:2px;}
+  .stat-box.ok{border-color:var(--green);background:var(--green-light);}
+  .stat-box.ok .stat-num{color:var(--green);}
+  .stat-box.warn{border-color:var(--warn);background:var(--warn-light);}
+  .stat-box.warn .stat-num{color:var(--warn);}
+  .stat-box.danger{border-color:var(--danger);background:#fdf0ee;}
+  .stat-box.danger .stat-num{color:var(--danger);}
+
+  .plan-veh-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:16px;}
+  .plan-veh-btn{border:2px solid var(--border);border-radius:10px;background:var(--white);cursor:pointer;overflow:hidden;position:relative;}
+  .plan-veh-btn.active-plan{border-color:var(--green);box-shadow:0 0 0 2px var(--green);}
+  .plan-veh-check{position:absolute;top:5px;right:5px;background:var(--green);color:#fff;border-radius:50%;width:20px;height:20px;font-size:0.7rem;display:none;align-items:center;justify-content:center;font-weight:800;}
+  .plan-veh-btn.active-plan .plan-veh-check{display:flex;}
+  .plan-veh-thumb{width:100%;height:60px;object-fit:cover;display:block;}
+  .plan-veh-thumb-ph{width:100%;height:60px;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;}
+  .plan-veh-info{padding:6px 8px 8px;}
+  .plan-veh-name{font-weight:700;font-size:0.75rem;color:var(--earth);}
+  .plan-veh-sub{font-size:0.65rem;color:var(--gray);}
+  .plan-veh-status{font-size:0.68rem;font-weight:700;margin-top:3px;}
+
+  .result-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #f0ebe0;background:var(--white);}
+  .result-item:first-child{border-radius:10px 10px 0 0;}
+  .result-item:last-child{border-bottom:none;border-radius:0 0 10px 10px;}
+  .result-item.only{border-radius:10px;}
+  .result-icon{font-size:1.3rem;flex-shrink:0;}
+  .result-info{flex:1;}
+  .result-name{font-weight:700;font-size:0.88rem;}
+  .result-detail{font-size:0.75rem;color:var(--gray);margin-top:1px;}
+  .result-badge{font-size:0.7rem;font-weight:700;padding:3px 8px;border-radius:12px;flex-shrink:0;}
+  .badge-ok{background:var(--green-light);color:var(--green);}
+  .badge-warn{background:var(--warn-light);color:var(--warn);}
+  .badge-danger{background:#fdf0ee;color:var(--danger);}
+
+  .section-title{font-size:0.82rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:0.05em;margin:16px 0 8px;}
+  .plan-date-row{display:flex;gap:8px;align-items:flex-end;margin-bottom:14px;}
+  .plan-date-row input{margin-bottom:0;flex:1;}
+  .plan-date-row button{padding:12px 16px;background:var(--earth);color:var(--gold-light);border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.88rem;}
+
+  .filter-bar{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
+  .filter-chip{padding:6px 12px;border:2px solid var(--border);border-radius:20px;font-size:0.78rem;font-weight:600;cursor:pointer;background:var(--white);color:var(--earth);}
+  .filter-chip.active{background:var(--earth);color:var(--gold-light);border-color:var(--earth);}
+
+  .day-block{background:var(--white);border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden;}
+  .day-header{background:var(--earth);color:var(--gold-light);padding:9px 14px;font-weight:700;font-size:0.88rem;display:flex;align-items:center;justify-content:space-between;}
+  .badge{background:var(--gold);color:var(--earth);font-weight:700;font-size:0.78rem;padding:2px 8px;border-radius:20px;}
+  .veh-section{border-bottom:1px solid var(--border);}
+  .veh-section:last-child{border-bottom:none;}
+  .veh-section-header{display:flex;align-items:center;gap:9px;padding:7px 14px;background:#f5f0e8;font-weight:700;font-size:0.82rem;color:var(--earth-mid);}
+  .veh-section-header .veh-name{flex:1;}
+  .veh-section-header .driver-count{font-size:0.72rem;color:var(--gray);}
+  .entry-row{display:flex;align-items:center;padding:9px 14px;border-bottom:1px solid #f0ebe0;gap:9px;}
+  .entry-row:last-child{border-bottom:none;}
+  .entry-avatar{width:32px;height:32px;border-radius:50%;background:var(--gold-light);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;color:var(--earth);flex-shrink:0;}
+  .entry-info{flex:1;}
+  .entry-name{font-weight:700;font-size:0.88rem;}
+  .entry-detail{font-size:0.72rem;color:var(--gray);margin-top:1px;}
+  .delete-btn{background:none;border:none;color:var(--danger);cursor:pointer;font-size:0.95rem;padding:4px;}
+  .day-summary{padding:7px 14px;background:var(--green-light);font-size:0.75rem;color:var(--green);font-weight:600;border-top:1px solid #c8dfc4;}
+  .empty-state{text-align:center;padding:32px 18px;color:var(--gray);}
+  .empty-state .icon{font-size:2.2rem;margin-bottom:8px;}
+
+  .photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+  .photo-item{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--white);}
+  .photo-preview{width:100%;height:70px;object-fit:cover;display:block;}
+  .photo-preview-ph{width:100%;height:70px;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;}
+  .photo-meta{padding:6px 8px 8px;}
+  .photo-veh-name{font-weight:700;font-size:0.75rem;}
+  .photo-veh-sub{font-size:0.65rem;color:var(--gray);margin-bottom:5px;}
+  .photo-upload-btn{display:block;width:100%;padding:7px;font-size:0.75rem;font-weight:600;background:var(--bg);border:1px solid var(--border);border-radius:6px;cursor:pointer;text-align:center;color:var(--earth-mid);}
+  input[type="file"]{display:none;}
+
+  .loading{text-align:center;padding:20px;color:var(--gray);font-size:0.9rem;}
+  .sync-bar{background:var(--gold-light);border:1px solid var(--gold);border-radius:8px;padding:8px 12px;font-size:0.78rem;color:var(--earth);margin-bottom:10px;display:none;}
+
+  .install-banner{background:var(--earth);color:var(--gold-light);padding:10px 14px;font-size:0.8rem;display:none;align-items:center;gap:10px;}
+  .install-banner button{background:var(--gold);color:var(--earth);border:none;border-radius:6px;padding:6px 12px;font-weight:700;cursor:pointer;font-size:0.78rem;white-space:nowrap;}
+  .install-banner .close-banner{background:none;border:none;color:var(--gold-light);cursor:pointer;font-size:1rem;padding:0;}
+
+  @media(max-width:360px){.vehicle-grid,.plan-veh-grid,.photo-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<div class="install-banner" id="install-banner">
+  <span style="flex:1">📱 App auf Homescreen installieren?</span>
+  <button onclick="installApp()">Installieren</button>
+  <button class="close-banner" onclick="document.getElementById('install-banner').style.display='none'">✕</button>
+</div>
+
+<header>
+  <h1>🌾 Ernte-Einsatzplaner</h1>
+  <div class="sub">Getreideernte – Einsatzplanung</div>
+</header>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="showTab('driver',this)">🚜<br>Eintragen</button>
+  <button class="tab-btn" onclick="showTab('plan',this)">📊<br>Planung</button>
+  <button class="tab-btn" onclick="showTab('overview',this)">📋<br>Übersicht</button>
+  <button class="tab-btn" onclick="showTab('config',this)">⚙️<br>Einrichten</button>
+</div>
+
+<!-- FAHRER -->
+<div id="tab-driver" class="section active">
+  <div class="card" id="driver-form-card">
+    <h2>Hallo! Hier eintragen 👋</h2>
+    <div class="hint">Name, Datum und Fahrzeug – fertig!</div>
+    <label for="drv-name">Ihr Name</label>
+    <input type="text" id="drv-name" placeholder="z.B. Klaus Müller" autocomplete="off">
+    <label for="drv-date">Datum</label>
+    <input type="date" id="drv-date">
+    <label>Fahrzeug wählen</label>
+    <div class="vehicle-grid" id="vehicle-grid"></div>
+    <label for="drv-note">Notiz (optional)</label>
+    <input type="text" id="drv-note" placeholder="z.B. nur halber Tag">
+    <button class="btn-main" id="submit-btn" onclick="submitEntry()">✅ Eintragen</button>
+  </div>
+  <div class="success-box" id="success-box">
+    <div class="icon">✅</div>
+    <p>Super! Ihre Anmeldung ist gespeichert.</p>
+    <button class="btn-secondary" onclick="resetForm()">Nochmal eintragen</button>
+  </div>
+</div>
+
+<!-- PLANUNG -->
+<div id="tab-plan" class="section">
+  <div id="plan-login">
+    <div class="login-box">
+      <div class="card">
+        <h2>📊 Tagesplanung</h2>
+        <div class="hint">Nur für den Chef – Passwort eingeben.</div>
+        <label for="plan-pw">Passwort</label>
+        <input type="password" id="plan-pw" placeholder="Passwort" onkeydown="if(event.key==='Enter')checkPlanLogin()">
+        <button class="btn-main" onclick="checkPlanLogin()">Anmelden</button>
+        <div id="plan-login-error" style="color:var(--danger);margin-top:10px;display:none;font-weight:600;">❌ Falsches Passwort</div>
+      </div>
+    </div>
+  </div>
+  <div id="plan-content" style="display:none;">
+    <div class="overview-header">
+      <h2>📊 Tagesplanung</h2>
+      <button class="logout-btn" onclick="logoutPlan()">Abmelden</button>
+    </div>
+    <div class="card" style="padding:14px;">
+      <label for="plan-date">Tag auswählen</label>
+      <div class="plan-date-row">
+        <input type="date" id="plan-date">
+        <button onclick="renderPlan()">Anzeigen</button>
+      </div>
+    </div>
+    <div id="plan-stats" style="display:none;">
+      <div class="stat-row" id="stat-row"></div>
+      <div class="section-title">Fahrzeuge einplanen</div>
+      <div style="font-size:0.78rem;color:var(--gray);margin-bottom:10px;">Antippen = Fahrzeug für heute einplanen</div>
+      <div class="plan-veh-grid" id="plan-veh-grid"></div>
+      <div class="section-title">Auswertung</div>
+      <div id="plan-result-list"></div>
+    </div>
+    <div id="plan-empty" style="display:none;">
+      <div class="empty-state"><div class="icon">📅</div><p>Datum wählen und auf Anzeigen tippen.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ÜBERSICHT -->
+<div id="tab-overview" class="section">
+  <div id="overview-login">
+    <div class="login-box">
+      <div class="card">
+        <h2>🔐 Chef-Übersicht</h2>
+        <div class="hint">Passwort eingeben.</div>
+        <label for="pw-input">Passwort</label>
+        <input type="password" id="pw-input" placeholder="Passwort" onkeydown="if(event.key==='Enter')checkLogin()">
+        <button class="btn-main" onclick="checkLogin()">Anmelden</button>
+        <div id="login-error" style="color:var(--danger);margin-top:10px;display:none;font-weight:600;">❌ Falsches Passwort</div>
+      </div>
+    </div>
+  </div>
+  <div id="overview-content" style="display:none;">
+    <div class="overview-header">
+      <div><h2>Alle Einsätze</h2><div style="font-size:0.75rem;color:var(--gray)" id="total-count"></div></div>
+      <button class="logout-btn" onclick="logout()">Abmelden</button>
+    </div>
+    <div id="sync-bar" class="sync-bar">🔄 Daten werden geladen...</div>
+    <div class="filter-bar" id="filter-bar"></div>
+    <div id="entries-container"></div>
+  </div>
+</div>
+
+<!-- KONFIG -->
+<div id="tab-config" class="section">
+  <div id="config-login">
+    <div class="login-box">
+      <div class="card">
+        <h2>⚙️ Einstellungen</h2>
+        <div class="hint">Passwort eingeben.</div>
+        <label for="cfg-pw">Passwort</label>
+        <input type="password" id="cfg-pw" placeholder="Passwort" onkeydown="if(event.key==='Enter')checkConfigLogin()">
+        <button class="btn-main" onclick="checkConfigLogin()">Anmelden</button>
+        <div id="cfg-error" style="color:var(--danger);margin-top:10px;display:none;font-weight:600;">❌ Falsches Passwort</div>
+      </div>
+    </div>
+  </div>
+  <div id="config-content" style="display:none;">
+    <div class="card">
+      <h2>📸 Fahrzeugfotos</h2>
+      <div class="hint">Foto hochladen – wird dauerhaft gespeichert.</div>
+      <div class="photo-grid" id="photo-grid"></div>
+    </div>
+    <div class="card">
+      <h2>🔐 Passwort ändern</h2>
+      <label for="new-pw">Neues Passwort</label>
+      <input type="password" id="new-pw" placeholder="Neues Passwort">
+      <button class="btn-main" style="margin-top:0" onclick="changePassword()">Speichern</button>
+      <div id="pw-saved" style="color:var(--green);display:none;margin-top:8px;font-weight:600;">✅ Gespeichert!</div>
+    </div>
+    <div class="card" style="border-color:var(--danger)">
+      <h2 style="color:var(--danger)">⚠️ Alle Einträge löschen</h2>
+      <button class="btn-secondary" style="border-color:var(--danger);color:var(--danger)" onclick="clearAll()">Alle Einsätze löschen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbxObfiII2fwBcIFWSoLGp6TicEaDTuff1EIbadsz4oVNQ3p1Dkkpp3OxM2cK4uSUMPM/exec';
+const PW_KEY = 'ernte_pw_v2';
+const PHOTOS_KEY = 'ernte_photos_v1';
+const PLAN_KEY = 'ernte_plan_v1';
+
+const VEHICLES = [
+  {id:'lexion', name:'Claas Lexion 8700', sub:'Mähdrescher 1',          color:'#7ab648',textColor:'#fff',emoji:'🌾'},
+  {id:'cr10',   name:'New Holland CR10',  sub:'Mähdrescher 2',          color:'#f5c400',textColor:'#333',emoji:'🌾'},
+  {id:'f1050',  name:'Fendt 1050',        sub:'+ Überladewagen',        color:'#4a7c3f',textColor:'#fff',emoji:'🚜'},
+  {id:'f728',   name:'Fendt 728',         sub:'+ Welger-Zug',           color:'#4a7c3f',textColor:'#fff',emoji:'🚜'},
+  {id:'f724',   name:'Fendt 724',         sub:'+ Rudolph-Zug',          color:'#4a7c3f',textColor:'#fff',emoji:'🚜'},
+  {id:'jd6250', name:'John Deere 6250R',  sub:'+ Wagner-Zug',           color:'#367c2b',textColor:'#f9c813',emoji:'🚜'},
+  {id:'f942',   name:'Fendt 942 Gen6',    sub:'+ Köckerling Allrounder',color:'#4a7c3f',textColor:'#fff',emoji:'🚜'},
+  {id:'scorpion',name:'Claas Scorpion 960',sub:'Teleskoplader',         color:'#7ab648',textColor:'#fff',emoji:'🏗️'},
+];
+
+let selectedVehicleId='', loggedIn=false, planLoggedIn=false, configLoggedIn=false, activeFilter='alle';
+let cachedEntries=null;
+let deferredPrompt=null;
+
+// PWA Install
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredPrompt=e;
+  document.getElementById('install-banner').style.display='flex';
+});
+function installApp() {
+  if(deferredPrompt){deferredPrompt.prompt();deferredPrompt=null;}
+  document.getElementById('install-banner').style.display='none';
+}
+
+// HELPERS
+function getPassword(){return localStorage.getItem(PW_KEY)||'ernte2024';}
+function getPhotos(){try{return JSON.parse(localStorage.getItem(PHOTOS_KEY))||{};}catch(e){return {};}}
+function savePhotos(p){localStorage.setItem(PHOTOS_KEY,JSON.stringify(p));}
+function getPlan(){try{return JSON.parse(localStorage.getItem(PLAN_KEY))||{};}catch(e){return {};}}
+function savePlan(p){localStorage.setItem(PLAN_KEY,JSON.stringify(p));}
+function today(){return new Date().toISOString().split('T')[0];}
+function fmtDate(d){const[y,m,day]=d.split('-');const wd=['So','Mo','Di','Mi','Do','Fr','Sa'][new Date(d).getDay()];return `${wd}, ${day}.${m}.${y}`;}
+
+// GOOGLE SHEETS API
+async function fetchEntries(){
+  try{
+    const r=await fetch(SHEET_URL);
+    const data=await r.json();
+    cachedEntries=data.filter(e=>e.id&&e.name);
+    return cachedEntries;
+  }catch(e){return cachedEntries||[];}
+}
+async function addEntry(entry){
+  await fetch(SHEET_URL,{method:'POST',body:JSON.stringify({action:'add',...entry})});
+}
+async function deleteEntryRemote(id){
+  await fetch(SHEET_URL,{method:'POST',body:JSON.stringify({action:'delete',id})});
+}
+
+// TABS
+function showTab(tab,btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  btn.classList.add('active');
+  if(tab==='overview'&&loggedIn)renderOverview();
+}
+
+// FAHRZEUG GRID
+function buildVehicleGrid(){
+  const grid=document.getElementById('vehicle-grid');
+  grid.innerHTML='';
+  const photos=getPhotos();
+  VEHICLES.forEach(v=>{
+    const btn=document.createElement('div');
+    btn.className='veh-btn'+(selectedVehicleId===v.id?' selected':'');
+    btn.onclick=()=>selectVehicle(v.id);
+    const imgHtml=photos[v.id]
+      ?`<img src="${photos[v.id]}" class="veh-thumb" alt="${v.name}">`
+      :`<div class="veh-thumb-ph" style="background:${v.color};color:${v.textColor};">${v.emoji} <span>${v.name}</span></div>`;
+    btn.innerHTML=`${imgHtml}<div class="veh-label"><div class="veh-name">${v.name}</div><div class="veh-sub">${v.sub}</div></div>`;
+    grid.appendChild(btn);
+  });
+}
+function selectVehicle(id){selectedVehicleId=id;buildVehicleGrid();}
+
+// EINTRAGEN
+async function submitEntry(){
+  const name=document.getElementById('drv-name').value.trim();
+  const date=document.getElementById('drv-date').value;
+  const note=document.getElementById('drv-note').value.trim();
+  if(!name){alert('Bitte Ihren Namen eingeben.');return;}
+  if(!date){alert('Bitte ein Datum wählen.');return;}
+  if(!selectedVehicleId){alert('Bitte ein Fahrzeug wählen.');return;}
+  const veh=VEHICLES.find(v=>v.id===selectedVehicleId);
+  const btn=document.getElementById('submit-btn');
+  btn.disabled=true;btn.textContent='⏳ Wird gespeichert...';
+  const entry={id:Date.now(),name,date,vehicleId:selectedVehicleId,vehicleName:veh.name,vehicleSub:veh.sub,note,ts:new Date().toISOString()};
+  await addEntry(entry);
+  cachedEntries=null;
+  btn.disabled=false;btn.textContent='✅ Eintragen';
+  document.getElementById('driver-form-card').style.display='none';
+  document.getElementById('success-box').style.display='block';
+}
+function resetForm(){
+  document.getElementById('drv-name').value='';
+  document.getElementById('drv-date').value=today();
+  document.getElementById('drv-note').value='';
+  selectedVehicleId='';
+  buildVehicleGrid();
+  document.getElementById('driver-form-card').style.display='block';
+  document.getElementById('success-box').style.display='none';
+}
+
+// PLANUNG
+function checkPlanLogin(){
+  if(document.getElementById('plan-pw').value===getPassword()){
+    planLoggedIn=true;
+    document.getElementById('plan-login').style.display='none';
+    document.getElementById('plan-content').style.display='block';
+    document.getElementById('plan-login-error').style.display='none';
+    document.getElementById('plan-date').value=today();
+    renderPlan();
+  }else{document.getElementById('plan-login-error').style.display='block';}
+}
+function logoutPlan(){
+  planLoggedIn=false;
+  document.getElementById('plan-login').style.display='block';
+  document.getElementById('plan-content').style.display='none';
+  document.getElementById('plan-pw').value='';
+}
+function getPlannedVehicles(date){return(getPlan()[date])||[];}
+function togglePlanVehicle(date,vid){
+  const plan=getPlan();
+  if(!plan[date])plan[date]=[];
+  const idx=plan[date].indexOf(vid);
+  if(idx>=0)plan[date].splice(idx,1);else plan[date].push(vid);
+  savePlan(plan);renderPlan();
+}
+async function renderPlan(){
+  const date=document.getElementById('plan-date').value;
+  const statsDiv=document.getElementById('plan-stats');
+  const emptyDiv=document.getElementById('plan-empty');
+  if(!date){statsDiv.style.display='none';emptyDiv.style.display='block';return;}
+  statsDiv.style.display='block';emptyDiv.style.display='none';
+  document.getElementById('plan-veh-grid').innerHTML='<div class="loading">⏳ Daten werden geladen...</div>';
+  const entries=(await fetchEntries()).filter(e=>e.date===date);
+  const planned=getPlannedVehicles(date);
+  const photos=getPhotos();
+  const plannedWithDriver=planned.filter(vid=>entries.some(e=>e.vehicleId===vid));
+  const plannedNoDriver=planned.filter(vid=>!entries.some(e=>e.vehicleId===vid));
+  const notPlannedHasDriver=VEHICLES.filter(v=>!planned.includes(v.id)&&entries.some(e=>e.vehicleId===v.id));
+  document.getElementById('stat-row').innerHTML=`
+    <div class="stat-box ok"><div class="stat-num">${plannedWithDriver.length}</div><div class="stat-lbl">✅ Besetzt</div></div>
+    <div class="stat-box danger"><div class="stat-num">${plannedNoDriver.length}</div><div class="stat-lbl">❌ Fehlt Fahrer</div></div>
+    <div class="stat-box warn"><div class="stat-num">${notPlannedHasDriver.length}</div><div class="stat-lbl">⚠️ Übrig</div></div>`;
+  const grid=document.getElementById('plan-veh-grid');
+  grid.innerHTML='';
+  VEHICLES.forEach(v=>{
+    const isPlanned=planned.includes(v.id);
+    const drivers=entries.filter(e=>e.vehicleId===v.id);
+    let statusHtml='';
+    if(isPlanned&&drivers.length>0)statusHtml=`<div class="plan-veh-status" style="color:var(--green)">✅ ${drivers.map(d=>d.name).join(', ')}</div>`;
+    else if(isPlanned&&drivers.length===0)statusHtml=`<div class="plan-veh-status" style="color:var(--danger)">❌ Kein Fahrer!</div>`;
+    else if(!isPlanned&&drivers.length>0)statusHtml=`<div class="plan-veh-status" style="color:var(--warn)">⚠️ ${drivers.map(d=>d.name).join(', ')}</div>`;
+    else statusHtml=`<div class="plan-veh-status" style="color:var(--gray)">– nicht geplant</div>`;
+    const imgHtml=photos[v.id]?`<img src="${photos[v.id]}" class="plan-veh-thumb">`:`<div class="plan-veh-thumb-ph" style="background:${v.color};color:${v.textColor};">${v.emoji}</div>`;
+    const btn=document.createElement('div');
+    btn.className='plan-veh-btn'+(isPlanned?' active-plan':'');
+    btn.onclick=()=>togglePlanVehicle(date,v.id);
+    btn.innerHTML=`<div class="plan-veh-check">✓</div>${imgHtml}<div class="plan-veh-info"><div class="plan-veh-name">${v.name}</div><div class="plan-veh-sub">${v.sub}</div>${statusHtml}</div>`;
+    grid.appendChild(btn);
+  });
+  const rows=[];
+  planned.forEach(vid=>{
+    const veh=VEHICLES.find(v=>v.id===vid);if(!veh)return;
+    const drivers=entries.filter(e=>e.vehicleId===vid);
+    if(drivers.length>0)rows.push({icon:'✅',name:veh.name,detail:drivers.map(d=>d.name+(d.note?` (${d.note})`:'') ).join(' · '),badge:'Besetzt',badgeClass:'badge-ok'});
+    else rows.push({icon:'❌',name:veh.name,detail:'Kein Fahrer eingetragen!',badge:'Fehlt',badgeClass:'badge-danger'});
+  });
+  notPlannedHasDriver.forEach(veh=>{
+    const drivers=entries.filter(e=>e.vehicleId===veh.id);
+    rows.push({icon:'⚠️',name:veh.name,detail:drivers.map(d=>d.name+(d.note?` (${d.note})`:'') ).join(' · ')+' – Fahrzeug nicht geplant',badge:'Übrig',badgeClass:'badge-warn'});
+  });
+  const list=document.getElementById('plan-result-list');
+  if(rows.length===0){list.innerHTML=`<div class="empty-state"><div class="icon">👆</div><p>Fahrzeuge oben antippen um zu planen.</p></div>`;}
+  else{list.innerHTML=rows.map((r,i)=>`<div class="result-item ${rows.length===1?'only':i===0?'first':i===rows.length-1?'last':''}"><div class="result-icon">${r.icon}</div><div class="result-info"><div class="result-name">${r.name}</div><div class="result-detail">${r.detail}</div></div><div class="result-badge ${r.badgeClass}">${r.badge}</div></div>`).join('');}
+}
+
+// ÜBERSICHT
+function checkLogin(){
+  if(document.getElementById('pw-input').value===getPassword()){
+    loggedIn=true;
+    document.getElementById('overview-login').style.display='none';
+    document.getElementById('overview-content').style.display='block';
+    document.getElementById('login-error').style.display='none';
+    renderOverview();
+  }else{document.getElementById('login-error').style.display='block';}
+}
+function logout(){
+  loggedIn=false;
+  document.getElementById('overview-login').style.display='block';
+  document.getElementById('overview-content').style.display='none';
+  document.getElementById('pw-input').value='';
+}
+async function renderOverview(){
+  const syncBar=document.getElementById('sync-bar');
+  syncBar.style.display='block';syncBar.textContent='🔄 Daten werden geladen...';
+  const entries=await fetchEntries();
+  syncBar.style.display='none';
+  document.getElementById('total-count').textContent=`${entries.length} Eintrag${entries.length!==1?'e':''} gesamt`;
+  const dates=[...new Set(entries.map(e=>e.date))].sort();
+  const filterBar=document.getElementById('filter-bar');
+  filterBar.innerHTML='';
+  ['alle',...dates].forEach(d=>{
+    const chip=document.createElement('div');
+    chip.className='filter-chip'+(activeFilter===d?' active':'');
+    chip.textContent=d==='alle'?'Alle Tage':fmtDate(d);
+    chip.onclick=()=>{activeFilter=d;renderOverview();};
+    filterBar.appendChild(chip);
+  });
+  const filtered=activeFilter==='alle'?entries:entries.filter(e=>e.date===activeFilter);
+  const container=document.getElementById('entries-container');
+  if(filtered.length===0){container.innerHTML=`<div class="empty-state"><div class="icon">🌾</div><p>Noch keine Einträge.</p></div>`;return;}
+  const byDate={};
+  filtered.forEach(e=>{if(!byDate[e.date])byDate[e.date]=[];byDate[e.date].push(e);});
+  container.innerHTML='';
+  const photos=getPhotos();
+  Object.keys(byDate).sort().forEach(date=>{
+    const dayEntries=byDate[date];
+    const block=document.createElement('div');block.className='day-block';
+    block.innerHTML=`<div class="day-header"><span>📅 ${fmtDate(date)}</span><span class="badge">${dayEntries.length} Fahrer</span></div>`;
+    VEHICLES.forEach(veh=>{
+      const vEntries=dayEntries.filter(e=>e.vehicleId===veh.id);if(vEntries.length===0)return;
+      const sec=document.createElement('div');sec.className='veh-section';
+      const thumbHtml=photos[veh.id]?`<img src="${photos[veh.id]}" style="width:36px;height:26px;object-fit:cover;border-radius:4px;">`:`<div style="width:36px;height:26px;border-radius:4px;background:${veh.color};display:flex;align-items:center;justify-content:center;font-size:0.9rem;">${veh.emoji}</div>`;
+      sec.innerHTML=`<div class="veh-section-header">${thumbHtml}<span class="veh-name">${veh.name} <span style="font-weight:400;color:var(--gray)">${veh.sub}</span></span><span class="driver-count">${vEntries.length} Fahrer</span></div>`;
+      vEntries.forEach(e=>{
+        const row=document.createElement('div');row.className='entry-row';
+        const initials=e.name.split(' ').map(n=>n[0]||'').join('').substring(0,2).toUpperCase();
+        row.innerHTML=`<div class="entry-avatar">${initials}</div><div class="entry-info"><div class="entry-name">${e.name}</div>${e.note?`<div class="entry-detail">💬 ${e.note}</div>`:''}</div><button class="delete-btn" onclick="deleteEntry(${e.id})">🗑</button>`;
+        sec.appendChild(row);
+      });
+      block.appendChild(sec);
+    });
+    const vu=[...new Set(dayEntries.map(e=>e.vehicleId))].length;
+    const summary=document.createElement('div');summary.className='day-summary';
+    summary.textContent=`✅ ${dayEntries.length} Fahrer · ${vu} von 8 Fahrzeugen besetzt`;
+    block.appendChild(summary);container.appendChild(block);
+  });
+}
+async function deleteEntry(id){
+  if(!confirm('Diesen Eintrag löschen?'))return;
+  await deleteEntryRemote(id);
+  cachedEntries=null;
+  renderOverview();
+}
+
+// KONFIG
+function checkConfigLogin(){
+  if(document.getElementById('cfg-pw').value===getPassword()){
+    configLoggedIn=true;
+    document.getElementById('config-login').style.display='none';
+    document.getElementById('config-content').style.display='block';
+    document.getElementById('cfg-error').style.display='none';
+    buildPhotoGrid();
+  }else{document.getElementById('cfg-error').style.display='block';}
+}
+function buildPhotoGrid(){
+  const photos=getPhotos();const grid=document.getElementById('photo-grid');grid.innerHTML='';
+  VEHICLES.forEach(v=>{
+    const item=document.createElement('div');item.className='photo-item';
+    const previewHtml=photos[v.id]?`<img src="${photos[v.id]}" class="photo-preview" id="prev-${v.id}">`:`<div class="photo-preview-ph" style="background:${v.color};color:${v.textColor};height:70px;" id="prev-${v.id}">${v.emoji}</div>`;
+    item.innerHTML=`${previewHtml}<div class="photo-meta"><div class="photo-veh-name">${v.name}</div><div class="photo-veh-sub">${v.sub}</div><label class="photo-upload-btn" for="file-${v.id}">📷 Foto hochladen</label><input type="file" id="file-${v.id}" accept="image/*" onchange="uploadPhoto('${v.id}',this)">${photos[v.id]?`<button onclick="removePhoto('${v.id}')" style="width:100%;margin-top:4px;padding:5px;font-size:0.72rem;background:none;border:1px solid var(--danger);color:var(--danger);border-radius:5px;cursor:pointer;">🗑 Entfernen</button>`:''}</div>`;
+    grid.appendChild(item);
+  });
+}
+function uploadPhoto(vehicleId,input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const img=new Image();
+    img.onload=function(){
+      const canvas=document.createElement('canvas');
+      const MAX=400;let w=img.width,h=img.height;
+      if(w>MAX){h=h*MAX/w;w=MAX;}
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      const base64=canvas.toDataURL('image/jpeg',0.75);
+      const photos=getPhotos();photos[vehicleId]=base64;savePhotos(photos);
+      buildPhotoGrid();buildVehicleGrid();
+    };img.src=e.target.result;
+  };reader.readAsDataURL(file);
+}
+function removePhoto(vehicleId){
+  const photos=getPhotos();delete photos[vehicleId];savePhotos(photos);
+  buildPhotoGrid();buildVehicleGrid();
+}
+function changePassword(){
+  const pw=document.getElementById('new-pw').value.trim();
+  if(!pw){alert('Bitte Passwort eingeben.');return;}
+  localStorage.setItem(PW_KEY,pw);
+  document.getElementById('pw-saved').style.display='block';
+  document.getElementById('new-pw').value='';
+  setTimeout(()=>document.getElementById('pw-saved').style.display='none',2500);
+}
+async function clearAll(){
+  if(!confirm('WIRKLICH alle Einträge löschen?'))return;
+  alert('Bitte im Google Sheet alle Zeilen manuell löschen.');
+}
+
+// INIT
+document.getElementById('drv-date').value=today();
+buildVehicleGrid();
+</script>
+</body>
+</html>
