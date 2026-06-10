@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ernteplaner">
+<title>Ernteplaner HG farming pro</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, "Segoe UI", sans-serif; background: #f0ece2; max-width: 480px; margin: 0 auto; min-height: 100vh; }
+.tabs { display: flex; background: #fff; border-bottom: 2px solid #d4cfc3; position: sticky; top: 0; z-index: 100; }
+.tab { flex: 1; padding: 12px 4px; border: none; background: none; cursor: pointer; font-size: 11px; font-weight: 700; color: #999; border-bottom: 3px solid transparent; }
+.tab.active { color: #3d6e28; border-bottom: 3px solid #3d6e28; }
+.page { padding: 16px 14px 100px; display: none; }
+.page.active { display: block; }
+.card { background: #fff; border-radius: 16px; padding: 18px 16px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); margin-bottom: 14px; }
+.card h2 { font-size: 21px; font-weight: 800; color: #1a2e0f; margin-bottom: 4px; }
+.sub { color: #888; font-size: 13px; margin-bottom: 18px; }
+label { display: block; font-weight: 700; font-size: 13px; color: #1a2e0f; margin-bottom: 6px; margin-top: 16px; }
+input[type=text], textarea { width: 100%; padding: 12px 14px; border: 1.5px solid #ddd8cc; border-radius: 10px; font-size: 15px; background: #faf8f3; color: #1a2e0f; font-family: inherit; outline: none; }
+input[type=text]:focus, textarea:focus { border-color: #3d6e28; }
+textarea { resize: none; }
+.zeitraum-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; background: #f7f4ec; border-radius: 10px; padding: 10px 12px; }
+.zeitraum-row input[type=date] { flex: 1; padding: 8px 6px; border: 1.5px solid #ddd8cc; border-radius: 8px; font-size: 13px; background: #fff; color: #1a2e0f; outline: none; min-width: 0; }
+.zeitraum-row span { font-size: 12px; color: #888; flex-shrink: 0; }
+.btn-del { background: none; border: none; cursor: pointer; color: #ccc; font-size: 18px; padding: 2px 4px; flex-shrink: 0; }
+.btn-add { background: none; border: 2px dashed #bbb; border-radius: 10px; width: 100%; padding: 10px; color: #888; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 4px; }
+.vehicle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.vehicle-btn { border: 3px solid transparent; border-radius: 12px; padding: 0; background: none; cursor: pointer; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.12); width: 100%; }
+.vehicle-btn.selected { border-color: #1a2e0f; box-shadow: 0 0 0 2px #1a2e0f; }
+.vehicle-img { position: relative; height: 88px; overflow: hidden; background: #3d6e28; }
+.vehicle-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vehicle-check { position: absolute; top: 6px; right: 6px; background: #1a2e0f; border-radius: 50%; width: 22px; height: 22px; display: none; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 700; }
+.vehicle-info { background: #f7f4ec; padding: 6px 8px 8px; text-align: center; }
+.vehicle-info strong { display: block; font-size: 12px; color: #1a2e0f; }
+.vehicle-info small { font-size: 11px; color: #777; }
+.btn-submit { margin-top: 18px; width: 100%; padding: 15px; background: #3d6e28; color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; }
+.btn-submit:disabled { background: #aaa; }
+.entry-card { background: #fff; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+.entry-row { display: flex; align-items: center; gap: 10px; }
+.entry-thumb { width: 52px; height: 38px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: #3d6e28; }
+.entry-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.entry-info { flex: 1; min-width: 0; }
+.entry-name { font-weight: 700; font-size: 14px; color: #1a2e0f; }
+.entry-vehicle { font-size: 12px; color: #666; }
+.entry-zeitraum { font-size: 11px; color: #3d6e28; margin-top: 2px; font-weight: 600; }
+.entry-note { font-size: 12px; color: #999; margin-top: 2px; font-style: italic; }
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.stat-box { background: #fff; border-radius: 14px; padding: 14px 8px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+.stat-num { font-weight: 800; font-size: 26px; color: #1a2e0f; line-height: 1.1; }
+.stat-label { font-size: 10px; color: #999; margin-top: 2px; }
+.bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.bar-thumb { width: 40px; height: 30px; border-radius: 6px; overflow: hidden; flex-shrink: 0; background: #3d6e28; }
+.bar-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.bar-info { flex: 1; min-width: 0; }
+.bar-labels { display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 12px; }
+.bar-track { height: 6px; background: #eee; border-radius: 4px; overflow: hidden; }
+.bar-fill { height: 100%; background: #3d6e28; border-radius: 4px; }
+.settings-vehicle { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f0ece2; }
+.settings-thumb { width: 52px; height: 38px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: #3d6e28; }
+.settings-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: #5a9e3a; flex-shrink: 0; }
+.section-title { font-size: 13px; font-weight: 700; color: #3d6e28; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+.toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1a2e0f; color: #fff; padding: 12px 22px; border-radius: 30px; font-size: 14px; font-weight: 600; white-space: nowrap; z-index: 999; box-shadow: 0 4px 16px rgba(0,0,0,0.25); opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.toast.show { opacity: 1; }
+.empty { text-align: center; padding: 50px 20px; }
+.empty-icon { font-size: 40px; margin-bottom: 10px; }
+.empty-text { font-weight: 600; color: #999; font-size: 15px; }
+.empty-sub { font-size: 13px; color: #bbb; margin-top: 4px; }
+.loading { text-align: center; padding: 40px; color: #aaa; font-size: 14px; }
+.view-switch { display: flex; gap: 8px; margin-bottom: 14px; }
+.vs-btn { flex: 1; padding: 10px 4px; border: none; border-radius: 10px; background: #fff; color: #888; font-size: 12px; font-weight: 700; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+.vs-btn.active { background: #3d6e28; color: #fff; }
+.tbl-wrap { background: #fff; border-radius: 14px; padding: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl th { text-align: left; padding: 8px 6px; color: #3d6e28; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #f0ece2; white-space: nowrap; }
+.tbl td { padding: 8px 6px; border-bottom: 1px solid #f0ece2; vertical-align: top; }
+.tbl-date { font-weight: 700; color: #1a2e0f; white-space: nowrap; }
+.tbl-driver { display: inline-block; background: #f0f7e8; color: #3d6e28; border-radius: 8px; padding: 2px 8px; margin: 2px 3px 2px 0; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.cal-month { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.cal-month button { background: #fff; border: none; border-radius: 8px; width: 36px; height: 36px; font-size: 16px; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.07); color: #3d6e28; }
+.cal-month .label { font-weight: 800; font-size: 16px; color: #1a2e0f; text-transform: capitalize; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-dow { text-align: center; font-size: 10px; font-weight: 700; color: #999; padding-bottom: 4px; text-transform: uppercase; }
+.cal-cell { background: #fff; border-radius: 8px; min-height: 64px; padding: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); display: flex; flex-direction: column; }
+.cal-cell.empty { background: transparent; box-shadow: none; }
+.cal-cell.today { box-shadow: 0 0 0 2px #3d6e28; }
+.cal-daynum { font-size: 11px; font-weight: 700; color: #1a2e0f; margin-bottom: 2px; }
+.cal-driver { font-size: 9px; background: #f0f7e8; color: #3d6e28; border-radius: 4px; padding: 1px 3px; margin-bottom: 2px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.cal-more { font-size: 9px; color: #aaa; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('eintragen',this)">Eintragen</button>
+  <button class="tab" onclick="showTab('meine',this)">Meine Einträge</button>
+</div>
+
+<div id="page-eintragen" class="page active">
+  <div class="card">
+    <h2>Hallo! Hier eintragen 👋</h2>
+    <p class="sub">Name, Verfügbarkeit und Fahrzeug – fertig!</p>
+    <label>Ihr Name</label>
+    <input type="text" id="input-name" placeholder="z.B. Klaus Müller">
+    <label>Wann haben Sie Zeit? (Zeiträume)</label>
+    <div id="zeitraum-list"></div>
+    <button class="btn-add" onclick="addZeitraum()">+ Zeitraum hinzufügen</button>
+    <label>Fahrzeug wählen</label>
+    <div class="vehicle-grid" id="vehicle-grid"></div>
+    <label>Notiz (optional)</label>
+    <textarea id="input-note" rows="2" placeholder="z.B. Schlag Nordfeld, ab 9 Uhr …"></textarea>
+    <button class="btn-submit" onclick="submitEntry()" id="btn-submit">Eintragen ✓</button>
+  </div>
+</div>
+
+<div id="page-meine" class="page">
+  <div class="card">
+    <h2>Meine Einträge 🔍</h2>
+    <p class="sub">Namen eingeben, um eigene Einträge zu sehen und zu ändern.</p>
+    <label>Ihr Name</label>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="search-name" placeholder="z.B. Klaus Müller" style="flex:1">
+      <button class="btn-submit" style="margin-top:0;width:auto;padding:12px 18px" onclick="loadMyEntries()">Suchen</button>
+    </div>
+  </div>
+  <div id="meine-content"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="images.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+const VEHICLES = [
+  { id:"claas8700",    name:"Claas Lexion 8700", sub:"Mähdrescher 1" },
+  { id:"newholland",   name:"New Holland CR10",  sub:"Mähdrescher 2" },
+  { id:"fendt1050",    name:"Fendt 1050",        sub:"+ Überladewagen" },
+  { id:"fendt728",     name:"Fendt 728",         sub:"+ Welger-Zug" },
+  { id:"fendt724",     name:"Fendt 724",         sub:"+ Rudolph-Zug" },
+  { id:"jd6250r",      name:"John Deere 6250R",  sub:"+ Wagner-Zug" },
+  { id:"fendt942gen6", name:"Fendt 942 Gen6",    sub:"+ Köckerling Allrounder" },
+  { id:"fendt942gen7", name:"Fendt 942 Gen7",    sub:"+ Krampe BigBody / Horsch" },
+  { id:"scorpion",     name:"Claas Scorpion 960",sub:"Teleskoplader" },
+];
+
+firebase.initializeApp({
+  apiKey: "AIzaSyCFKW-WI1O3ejsMetA-K6hr0LuW2wfTfG8",
+  authDomain: "ernteplaner-hg-farming-pro.firebaseapp.com",
+  projectId: "ernteplaner-hg-farming-pro",
+  storageBucket: "ernteplaner-hg-farming-pro.firebasestorage.app",
+  messagingSenderId: "365960900046",
+  appId: "1:365960900046:web:87173cc6ad8c3159398f9f"
+});
+const db = firebase.firestore();
+
+let selectedVehicle = null;
+let zeitraeume = [];
+let allEntries = [];
+
+function showTab(name, btn) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.getElementById("page-"+name).classList.add("active");
+  btn.classList.add("active");
+}
+
+function buildVehicleGrid() {
+  document.getElementById("vehicle-grid").innerHTML = VEHICLES.map(v => `
+    <button class="vehicle-btn" id="vbtn-${v.id}" onclick="selectVehicle('${v.id}')">
+      <div class="vehicle-img">
+        <img src="${VEHICLE_IMAGES[v.id]}" alt="${v.name}">
+        <div class="vehicle-check" id="vcheck-${v.id}">✓</div>
+      </div>
+      <div class="vehicle-info"><strong>${v.name}</strong><small>${v.sub}</small></div>
+    </button>`).join("");
+}
+
+function selectVehicle(id) {
+  selectedVehicle = id;
+  VEHICLES.forEach(v => {
+    document.getElementById("vbtn-"+v.id).classList.toggle("selected", v.id===id);
+    document.getElementById("vcheck-"+v.id).style.display = v.id===id ? "flex" : "none";
+  });
+}
+
+function addZeitraum() {
+  const today = new Date().toISOString().split("T")[0];
+  zeitraeume.push({ von: today, bis: today });
+  renderZeitraeume();
+}
+
+function renderZeitraeume() {
+  document.getElementById("zeitraum-list").innerHTML = zeitraeume.map((z,i) => `
+    <div class="zeitraum-row">
+      <input type="date" value="${z.von}" onchange="zeitraeume[${i}].von=this.value">
+      <span>bis</span>
+      <input type="date" value="${z.bis}" onchange="zeitraeume[${i}].bis=this.value">
+      <button class="btn-del" onclick="removeZeitraum(${i})">✕</button>
+    </div>`).join("");
+}
+
+function removeZeitraum(i) { zeitraeume.splice(i,1); renderZeitraeume(); }
+
+async function submitEntry() {
+  const name = document.getElementById("input-name").value.trim();
+  const note = document.getElementById("input-note").value.trim();
+  if (!name) return showToast("⚠️ Bitte Namen eingeben.");
+  if (!zeitraeume.length) return showToast("⚠️ Bitte Zeitraum eintragen.");
+  if (!selectedVehicle) return showToast("⚠️ Bitte Fahrzeug wählen.");
+  const btn = document.getElementById("btn-submit");
+  btn.disabled = true; btn.textContent = "Speichern…";
+  const v = VEHICLES.find(x => x.id===selectedVehicle);
+  try {
+    await db.collection("eintraege").add({
+      name, note, vehicleId: v.id, vehicleName: v.name, vehicleSub: v.sub,
+      zeitraeume: zeitraeume.map(z => ({ von: z.von, bis: z.bis })),
+      erstellt: new Date().toISOString()
+    });
+    showToast("✓ Gespeichert! Danke, " + name + ".");
+    document.getElementById("input-name").value = "";
+    document.getElementById("input-note").value = "";
+    zeitraeume = []; renderZeitraeume(); selectedVehicle = null;
+    VEHICLES.forEach(v => {
+      document.getElementById("vbtn-"+v.id).classList.remove("selected");
+      document.getElementById("vcheck-"+v.id).style.display = "none";
+    });
+  } catch(e) { showToast("❌ Fehler: " + e.message); }
+  btn.disabled = false; btn.textContent = "Eintragen ✓";
+}
+
+function fmtDate(iso) { if(!iso) return ""; const [y,m,d]=iso.split("-"); return d+"."+m+"."+y; }
+
+// ---- Meine Einträge ----
+let myEntries = [];
+let myEditZeitraeume = {}; // entryId -> array of {von,bis} while editing
+
+async function loadMyEntries() {
+  const name = document.getElementById("search-name").value.trim();
+  const el = document.getElementById("meine-content");
+  if (!name) { showToast("⚠️ Bitte Namen eingeben."); return; }
+  el.innerHTML = `<div class="loading">⏳ Suche…</div>`;
+  try {
+    const snap = await db.collection("eintraege").where("name","==",name).orderBy("erstellt","desc").get();
+    myEntries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderMyEntries();
+  } catch(e) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Fehler</div><div class="empty-sub">${e.message}</div></div>`;
+  }
+}
+
+function renderMyEntries() {
+  const el = document.getElementById("meine-content");
+  if (!myEntries.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Keine Einträge gefunden.</div><div class="empty-sub">Prüfe die Schreibweise deines Namens.</div></div>`;
+    return;
+  }
+  el.innerHTML = myEntries.map(e => {
+    const v = VEHICLES.find(x => x.id===e.vehicleId)||{};
+    if (!myEditZeitraeume[e.id]) myEditZeitraeume[e.id] = (e.zeitraeume||[]).map(z=>({von:z.von,bis:z.bis}));
+    const zlist = myEditZeitraeume[e.id];
+    const ztRows = zlist.map((z,i) => `
+      <div class="zeitraum-row">
+        <input type="date" value="${z.von}" onchange="updateMyZeitraum('${e.id}',${i},'von',this.value)">
+        <span>bis</span>
+        <input type="date" value="${z.bis}" onchange="updateMyZeitraum('${e.id}',${i},'bis',this.value)">
+        <button class="btn-del" onclick="removeMyZeitraum('${e.id}',${i})">✕</button>
+      </div>`).join("");
+    return `<div class="entry-card">
+      <div class="entry-row" style="margin-bottom:10px">
+        <div class="entry-thumb"><img src="${VEHICLE_IMAGES[e.vehicleId]||""}" alt="${e.vehicleName}"></div>
+        <div class="entry-info">
+          <div class="entry-name">${e.name}</div>
+          <div class="entry-vehicle">${e.vehicleName} · ${e.vehicleSub}</div>
+          ${e.note ? `<div class="entry-note">${e.note}</div>` : ""}
+        </div>
+        <button onclick="deleteMyEntry('${e.id}')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:18px;padding:4px">🗑</button>
+      </div>
+      <label style="margin-top:0">Zeiträume</label>
+      ${ztRows}
+      <button class="btn-add" onclick="addMyZeitraum('${e.id}')">+ Zeitraum hinzufügen</button>
+      <button class="btn-submit" onclick="saveMyEntry('${e.id}')">Änderungen speichern ✓</button>
+    </div>`;
+  }).join("");
+}
+
+function updateMyZeitraum(id, i, field, val) { myEditZeitraeume[id][i][field] = val; }
+function addMyZeitraum(id) {
+  const today = new Date().toISOString().split("T")[0];
+  myEditZeitraeume[id].push({von:today, bis:today});
+  renderMyEntries();
+}
+function removeMyZeitraum(id, i) { myEditZeitraeume[id].splice(i,1); renderMyEntries(); }
+
+async function saveMyEntry(id) {
+  const zts = myEditZeitraeume[id];
+  if (!zts.length) return showToast("⚠️ Mindestens ein Zeitraum nötig.");
+  try {
+    await db.collection("eintraege").doc(id).update({ zeitraeume: zts });
+    const e = myEntries.find(x=>x.id===id);
+    if (e) e.zeitraeume = zts.map(z=>({...z}));
+    showToast("✓ Gespeichert!");
+  } catch(e) { showToast("❌ Fehler: " + e.message); }
+}
+
+async function deleteMyEntry(id) {
+  if (!confirm("Diesen Eintrag wirklich löschen?")) return;
+  try {
+    await db.collection("eintraege").doc(id).delete();
+    myEntries = myEntries.filter(e=>e.id!==id);
+    delete myEditZeitraeume[id];
+    renderMyEntries();
+    showToast("✓ Eintrag gelöscht.");
+  } catch(e) { showToast("❌ Fehler: " + e.message); }
+}
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+buildVehicleGrid();
+addZeitraum();
+</script>
+</body>
+</html>
