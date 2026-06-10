@@ -69,6 +69,26 @@ textarea { resize: none; }
 .empty-text { font-weight: 600; color: #999; font-size: 15px; }
 .empty-sub { font-size: 13px; color: #bbb; margin-top: 4px; }
 .loading { text-align: center; padding: 40px; color: #aaa; font-size: 14px; }
+.view-switch { display: flex; gap: 8px; margin-bottom: 14px; }
+.vs-btn { flex: 1; padding: 10px 4px; border: none; border-radius: 10px; background: #fff; color: #888; font-size: 12px; font-weight: 700; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+.vs-btn.active { background: #3d6e28; color: #fff; }
+.tbl-wrap { background: #fff; border-radius: 14px; padding: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl th { text-align: left; padding: 8px 6px; color: #3d6e28; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #f0ece2; white-space: nowrap; }
+.tbl td { padding: 8px 6px; border-bottom: 1px solid #f0ece2; vertical-align: top; }
+.tbl-date { font-weight: 700; color: #1a2e0f; white-space: nowrap; }
+.tbl-driver { display: inline-block; background: #f0f7e8; color: #3d6e28; border-radius: 8px; padding: 2px 8px; margin: 2px 3px 2px 0; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.cal-month { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.cal-month button { background: #fff; border: none; border-radius: 8px; width: 36px; height: 36px; font-size: 16px; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.07); color: #3d6e28; }
+.cal-month .label { font-weight: 800; font-size: 16px; color: #1a2e0f; text-transform: capitalize; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-dow { text-align: center; font-size: 10px; font-weight: 700; color: #999; padding-bottom: 4px; text-transform: uppercase; }
+.cal-cell { background: #fff; border-radius: 8px; min-height: 64px; padding: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); display: flex; flex-direction: column; }
+.cal-cell.empty { background: transparent; box-shadow: none; }
+.cal-cell.today { box-shadow: 0 0 0 2px #3d6e28; }
+.cal-daynum { font-size: 11px; font-weight: 700; color: #1a2e0f; margin-bottom: 2px; }
+.cal-driver { font-size: 9px; background: #f0f7e8; color: #3d6e28; border-radius: 4px; padding: 1px 3px; margin-bottom: 2px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.cal-more { font-size: 9px; color: #aaa; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -98,6 +118,11 @@ textarea { resize: none; }
 </div>
 
 <div id="page-planung" class="page">
+  <div class="view-switch">
+    <button class="vs-btn active" id="vs-liste" onclick="setPlanView('liste')">📋 Liste</button>
+    <button class="vs-btn" id="vs-tabelle" onclick="setPlanView('tabelle')">📊 Tabelle</button>
+    <button class="vs-btn" id="vs-kalender" onclick="setPlanView('kalender')">📅 Kalender</button>
+  </div>
   <div id="planung-content"><div class="loading">⏳ Verbinde…</div></div>
 </div>
 
@@ -147,6 +172,15 @@ const db = firebase.firestore();
 let selectedVehicle = null;
 let zeitraeume = [];
 let allEntries = [];
+let planView = 'liste';
+let calMonth = new Date().getMonth();
+let calYear = new Date().getFullYear();
+
+function setPlanView(v) {
+  planView = v;
+  ['liste','tabelle','kalender'].forEach(k => document.getElementById('vs-'+k).classList.toggle('active', k===v));
+  renderPlanung();
+}
 
 function showTab(name, btn) {
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
@@ -235,6 +269,8 @@ db.collection("eintraege").orderBy("erstellt","desc").onSnapshot(snap => {
 function fmtDate(iso) { if(!iso) return ""; const [y,m,d]=iso.split("-"); return d+"."+m+"."+y; }
 
 function renderPlanung() {
+  if (planView === 'tabelle') return renderTabelle();
+  if (planView === 'kalender') return renderKalender();
   const el = document.getElementById("planung-content");
   if (!allEntries.length) { el.innerHTML = `<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Noch keine Einträge.</div><div class="empty-sub">Fahrer tragen sich im Tab "Eintragen" ein.</div></div>`; return; }
   el.innerHTML = allEntries.map(e => {
@@ -251,6 +287,83 @@ function renderPlanung() {
       <button onclick="deleteEntry('${e.id}')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:18px;padding:4px">✕</button>
     </div></div>`;
   }).join("");
+}
+
+// Build map: dateStr (YYYY-MM-DD) -> [{name, vehicleName}]
+function buildDayMap() {
+  const map = {};
+  allEntries.forEach(e => {
+    (e.zeitraeume||[]).forEach(z => {
+      if (!z.von || !z.bis) return;
+      let cur = new Date(z.von+"T00:00:00");
+      const end = new Date(z.bis+"T00:00:00");
+      if (cur > end) return;
+      let guard = 0;
+      while (cur <= end && guard < 400) {
+        const key = cur.toISOString().split("T")[0];
+        if (!map[key]) map[key] = [];
+        map[key].push({ name: e.name, vehicleName: e.vehicleName });
+        cur.setDate(cur.getDate()+1);
+        guard++;
+      }
+    });
+  });
+  return map;
+}
+
+function renderTabelle() {
+  const el = document.getElementById("planung-content");
+  const map = buildDayMap();
+  const days = Object.keys(map).sort();
+  if (!days.length) { el.innerHTML = `<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Noch keine Verfügbarkeiten.</div></div>`; return; }
+  let rows = days.map(d => {
+    const drivers = map[d].map(p => `<span class="tbl-driver">${p.name}</span>`).join("");
+    return `<tr><td class="tbl-date">${fmtDate(d)}</td><td>${drivers}</td></tr>`;
+  }).join("");
+  el.innerHTML = `<div class="tbl-wrap"><table class="tbl">
+    <tr><th>Datum</th><th>Fahrer verfügbar</th></tr>${rows}
+  </table></div>`;
+}
+
+const MONTH_NAMES = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+const DOW_NAMES = ["Mo","Di","Mi","Do","Fr","Sa","So"];
+
+function changeMonth(delta) {
+  calMonth += delta;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderKalender();
+}
+
+function renderKalender() {
+  const el = document.getElementById("planung-content");
+  const map = buildDayMap();
+  const firstDay = new Date(calYear, calMonth, 1);
+  const startDow = (firstDay.getDay() + 6) % 7; // Mon=0
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  let cells = "";
+  for (let i=0;i<startDow;i++) cells += `<div class="cal-cell empty"></div>`;
+  for (let d=1; d<=daysInMonth; d++) {
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const drivers = map[dateStr] || [];
+    const isToday = dateStr === todayStr;
+    let driverHtml = drivers.slice(0,3).map(p => `<div class="cal-driver">${p.name}</div>`).join("");
+    if (drivers.length > 3) driverHtml += `<div class="cal-more">+${drivers.length-3} mehr</div>`;
+    cells += `<div class="cal-cell ${isToday?'today':''}"><div class="cal-daynum">${d}</div>${driverHtml}</div>`;
+  }
+
+  el.innerHTML = `
+    <div class="cal-month">
+      <button onclick="changeMonth(-1)">‹</button>
+      <div class="label">${MONTH_NAMES[calMonth]} ${calYear}</div>
+      <button onclick="changeMonth(1)">›</button>
+    </div>
+    <div class="cal-grid">
+      ${DOW_NAMES.map(n=>`<div class="cal-dow">${n}</div>`).join("")}
+      ${cells}
+    </div>`;
 }
 
 function deleteEntry(id) { if(confirm("Eintrag löschen?")) db.collection("eintraege").doc(id).delete(); }
